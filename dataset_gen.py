@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -121,6 +122,8 @@ def write_small_files(output_dir, total_rows, rows_per_file, compression, seed):
 
     written_rows = 0
 
+    start_time = time.time() # Starting the timer
+
     for file_idx in range(num_files):
         # Last file may contain fewer rows than the others.
         rows_this_file = min(rows_per_file, total_rows - written_rows)
@@ -152,7 +155,8 @@ def write_small_files(output_dir, total_rows, rows_per_file, compression, seed):
         if (file_idx + 1) % 100 == 0 or file_idx == num_files - 1:
             print(f"Written {file_idx + 1}/{num_files} files")
 
-    return num_files
+    elapsed = time.time() - start_time # Ending the timer
+    return num_files, elapsed
 
 
 def main():
@@ -223,7 +227,7 @@ def main():
         "small"
     )
 
-    num_files = write_small_files(
+    num_files, elapsed = write_small_files(
         output_dir=output_dir,
         total_rows=total_rows,
         rows_per_file=args.rows_per_file,
@@ -240,6 +244,7 @@ def main():
     print(f"Rows per file   : {args.rows_per_file}")
     print(f"Files created   : {num_files}")
     print(f"Compression     : {args.compression}")
+    print(f"Elapsed time    : {elapsed:.2f} seconds")
     print(f"Output path     : {output_dir}")
 
 
