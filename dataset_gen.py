@@ -198,7 +198,7 @@ def main():
     # Compression can be kept configurable for experiments.
     parser.add_argument(
         "--compression",
-        default="snappy",
+        default="none",
         choices=["snappy", "zstd", "gzip", "none"],
         help="Parquet compression codec"
     )
