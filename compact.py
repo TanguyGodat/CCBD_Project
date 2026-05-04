@@ -127,7 +127,7 @@ def main():
     )
     parser.add_argument(
         "--compression",
-        default="snappy",
+        default="none",
         choices=["snappy", "zstd", "gzip", "none"],
         help="Parquet compression codec"
     )
