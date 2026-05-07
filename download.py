@@ -33,6 +33,8 @@ def download_prefix(s3_client, bucket, prefix, local_dir):
     if not keys:
         raise ValueError(f"No objects found under prefix: {prefix}")
 
+    os.makedirs(local_dir, exist_ok=True)
+
     total_bytes = 0
     start = time.time()
 
@@ -50,24 +52,21 @@ def download_prefix(s3_client, bucket, prefix, local_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Download a curated dataset layout from MinIO/S3")
-    parser.add_argument("--bucket", required=True)
-    parser.add_argument("--dataset-id", required=True)
-    parser.add_argument("--layout", required=True, choices=["small", "compact"])
-    parser.add_argument("--base-dir", default="downloads")
-    parser.add_argument("--endpoint-url", required=True)
-    parser.add_argument("--region", default="us-east-1")
-    parser.add_argument("--access-key", default=None)
-    parser.add_argument("--secret-key", default=None)
+    parser = argparse.ArgumentParser(description="Download any MinIO/S3 prefix to a local directory")
+    parser.add_argument("--bucket", required=True, help="Source bucket")
+    parser.add_argument("--prefix", required=True, help="S3 prefix to download")
+    parser.add_argument("--local-dir", required=True, help="Local output directory")
+    parser.add_argument("--endpoint-url", required=True, help="MinIO/S3 endpoint URL")
+    parser.add_argument("--region", default="us-east-1", help="S3 region")
+    parser.add_argument("--access-key", default=None, help="S3 access key")
+    parser.add_argument("--secret-key", default=None, help="S3 secret key")
     args = parser.parse_args()
-
-    prefix = f"curated/{args.dataset_id}/{args.layout}"
-    local_dir = os.path.join(args.base_dir, "curated", args.dataset_id, args.layout)
 
     client_kwargs = {
         "endpoint_url": args.endpoint_url,
         "region_name": args.region,
     }
+
     if args.access_key and args.secret_key:
         client_kwargs["aws_access_key_id"] = args.access_key
         client_kwargs["aws_secret_access_key"] = args.secret_key
@@ -77,20 +76,20 @@ def main():
     total_bytes, file_count, elapsed = download_prefix(
         s3_client=s3,
         bucket=args.bucket,
-        prefix=prefix,
-        local_dir=local_dir,
+        prefix=args.prefix,
+        local_dir=args.local_dir,
     )
 
     mb = total_bytes / (1024 * 1024)
     throughput = mb / elapsed if elapsed > 0 else 0.0
 
     print("\n=== Download complete ===")
-    print(f"S3 prefix   : {prefix}")
-    print(f"Local dir   : {local_dir}")
-    print(f"Files       : {file_count}")
-    print(f"Bytes       : {total_bytes}")
+    print(f"S3 prefix : {args.prefix}")
+    print(f"Local dir : {args.local_dir}")
+    print(f"Files : {file_count}")
+    print(f"Bytes : {total_bytes}")
     print(f"Elapsed (s) : {elapsed:.2f}")
-    print(f"Throughput  : {throughput:.2f} MB/s")
+    print(f"Throughput : {throughput:.2f} MB/s")
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ def upload_directory(s3_client, bucket, local_dir, s3_prefix):
 
     for i, file_path in enumerate(files, start=1):
         rel_path = os.path.relpath(file_path, local_dir).replace("\\", "/")
-        key = f"{s3_prefix}/{rel_path}"
+        key = f"{s3_prefix}/{rel_path}" if s3_prefix else rel_path
         size = os.path.getsize(file_path)
         s3_client.upload_file(file_path, bucket, key)
         total_bytes += size
@@ -38,24 +38,21 @@ def upload_directory(s3_client, bucket, local_dir, s3_prefix):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Upload a curated dataset layout to MinIO/S3")
-    parser.add_argument("--bucket", required=True)
-    parser.add_argument("--dataset-id", required=True)
-    parser.add_argument("--layout", required=True, choices=["small", "compact"])
-    parser.add_argument("--base-dir", default="data")
-    parser.add_argument("--endpoint-url", required=True)
-    parser.add_argument("--region", default="us-east-1")
-    parser.add_argument("--access-key", default=None)
-    parser.add_argument("--secret-key", default=None)
+    parser = argparse.ArgumentParser(description="Upload any local dataset directory to MinIO/S3")
+    parser.add_argument("--bucket", required=True, help="Target bucket")
+    parser.add_argument("--local-dir", required=True, help="Local directory to upload")
+    parser.add_argument("--prefix", required=True, help="Target S3 prefix")
+    parser.add_argument("--endpoint-url", required=True, help="MinIO/S3 endpoint URL")
+    parser.add_argument("--region", default="us-east-1", help="S3 region")
+    parser.add_argument("--access-key", default=None, help="S3 access key")
+    parser.add_argument("--secret-key", default=None, help="S3 secret key")
     args = parser.parse_args()
-
-    local_dir = os.path.join(args.base_dir, "curated", args.dataset_id, args.layout)
-    s3_prefix = f"curated/{args.dataset_id}/{args.layout}"
 
     client_kwargs = {
         "endpoint_url": args.endpoint_url,
         "region_name": args.region,
     }
+
     if args.access_key and args.secret_key:
         client_kwargs["aws_access_key_id"] = args.access_key
         client_kwargs["aws_secret_access_key"] = args.secret_key
@@ -65,20 +62,20 @@ def main():
     total_bytes, file_count, elapsed = upload_directory(
         s3_client=s3,
         bucket=args.bucket,
-        local_dir=local_dir,
-        s3_prefix=s3_prefix,
+        local_dir=args.local_dir,
+        s3_prefix=args.prefix,
     )
 
     mb = total_bytes / (1024 * 1024)
     throughput = mb / elapsed if elapsed > 0 else 0.0
 
     print("\n=== Upload complete ===")
-    print(f"Local dir   : {local_dir}")
-    print(f"S3 prefix   : {s3_prefix}")
-    print(f"Files       : {file_count}")
-    print(f"Bytes       : {total_bytes}")
+    print(f"Local dir : {args.local_dir}")
+    print(f"S3 prefix : {args.prefix}")
+    print(f"Files : {file_count}")
+    print(f"Bytes : {total_bytes}")
     print(f"Elapsed (s) : {elapsed:.2f}")
-    print(f"Throughput  : {throughput:.2f} MB/s")
+    print(f"Throughput : {throughput:.2f} MB/s")
 
 
 if __name__ == "__main__":

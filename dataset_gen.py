@@ -19,6 +19,7 @@ TOLLGATES = [
 VEHICLE_TYPES = ["motorcycle", "car", "van", "bus", "truck"]
 
 SIZE_TO_ROWS = {
+    "Test": 100_000,
     "S": 5_000_000,
     "M": 25_000_000,
     "L": 100_000_000,
