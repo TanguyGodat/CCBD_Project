@@ -18,7 +18,7 @@ def count_parquet_files(directory):
     return count
 
 
-def compact_dataset(input_dir, output_dir, output_file_count, compression):
+def compact_dataset(input_dir, output_dir, output_file_count):
     """
     Read a small-files Parquet dataset and rewrite it as a chosen number
     of larger Parquet files.
@@ -66,7 +66,7 @@ def compact_dataset(input_dir, output_dir, output_file_count, compression):
             pq.write_table(
                 table,
                 file_path,
-                compression=compression,
+                compression="none",
                 use_dictionary=True
             )
 
@@ -89,7 +89,7 @@ def compact_dataset(input_dir, output_dir, output_file_count, compression):
         pq.write_table(
             table,
             file_path,
-            compression=compression,
+            compression="none",
             use_dictionary=True
         )
 
@@ -125,16 +125,8 @@ def main():
         required=True,
         help="Desired number of files in the compact output layout"
     )
-    parser.add_argument(
-        "--compression",
-        default="none",
-        choices=["snappy", "zstd", "gzip", "none"],
-        help="Parquet compression codec"
-    )
 
     args = parser.parse_args()
-
-    compression = None if args.compression == "none" else args.compression
 
     input_dir = os.path.join(
         args.base_dir,
@@ -155,8 +147,7 @@ def main():
     total_rows, compact_file_count, elapsed, rows_per_output_file = compact_dataset(
         input_dir=input_dir,
         output_dir=output_dir,
-        output_file_count=args.output_file_count,
-        compression=compression
+        output_file_count=args.output_file_count
     )
 
     print("\n=== Compaction complete ===")
@@ -168,7 +159,7 @@ def main():
     print(f"Actual output files   : {compact_file_count}")
     print(f"Total rows            : {total_rows}")
     print(f"Rows per output file  : {rows_per_output_file}")
-    print(f"Compression           : {args.compression}")
+    print(f"Compression           : {"none"}")
     print(f"Elapsed time (s)      : {elapsed:.2f}")
 
 

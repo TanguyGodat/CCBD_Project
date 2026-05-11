@@ -274,6 +274,16 @@ def parse_layout_arg(layout_arg):
         "s3_prefix": parts[2],
     }
 
+def to_bench(dataset_id, bucket, endpoint_url, size, generate_small = True, small_output_dir= None, rows_per_file= 10_000,
+             seed= 67, generate_compact = False, compact_from= None, compact_to= None,
+             compact_output_file_count= 250_000, layout= [],
+             region_name= "us-east-1", access_key= None, secret_key= None, query_start= "2025-01-15T00:00:00+00:00",
+             query_end= "2025-02-15T00:00:00+00:00", download_base_dir= "bench_downloads",
+             query_region= "tollgate_a1_geneva", cleanup_prefix= False):
+    # test if input are correct first def check_input
+    # if return yes -> def run_bench
+    pass
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -287,7 +297,6 @@ def main():
     parser.add_argument("--results-csv", default="results/results.csv", help="CSV output path on the VM")
     parser.add_argument("--rows-per-file", type=int, default=10_000, help="Rows per small Parquet file")
     parser.add_argument("--compact-output-file-count", type=int, default=20, help="Target number of compact files")
-    parser.add_argument("--compression", default="none", choices=["snappy", "zstd", "gzip", "none"], help="Parquet compression codec")
     parser.add_argument("--seed", type=int, default=67, help="Random seed")
 
     parser.add_argument("--bucket", required=True, help="MinIO/S3 bucket")
@@ -316,7 +325,6 @@ def main():
     args = parser.parse_args()
 
     total_rows = SIZE_TO_ROWS[args.size]
-    compression = None if args.compression == "none" else args.compression
 
     generation_elapsed = None
     generated_file_count = None
@@ -324,6 +332,19 @@ def main():
     compact_total_rows = None
     compact_file_count = None
     rows_per_compact_file = None
+
+    # to_bench(**args) to do probably
+    to_bench(args.generate_small, args.small_output_dir, args.size, args.rows_per_file,
+             args.seed, generate_compact, args.compact_from, args.compact_to,
+             args.compact_output_file_count, args.layout, args.endpoint_url,
+             args.region_name, args.access_key, args.secret_key, args.query_start,
+             args.query_end, args.bucket, args.dataset_id, args.download_base_dir,
+             args.query_region, args.cleanup_prefix)
+    to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.generate_small,
+             args.small_output_dir, args.rows_per_file, args.seed, args.generate_compact,
+             args.compact_from, args.compact_to, args.compact_output_file_count, args.layout,
+             args.region_name, args.access_key, args.secret_key, args.query_start,
+             args.query_end, args.download_base_dir, args.query_region, args.cleanup_prefix)
 
     if args.generate_small:
         if not args.small_output_dir:
@@ -335,8 +356,7 @@ def main():
             output_dir=args.small_output_dir,
             total_rows=total_rows,
             rows_per_file=args.rows_per_file,
-            compression=compression,
-            seed=args.seed,
+            seed=args.seed
         )
 
     if args.compact_from or args.compact_to:
@@ -350,8 +370,7 @@ def main():
         compact_total_rows, compact_file_count, compaction_elapsed, rows_per_compact_file = compact_dataset(
             input_dir=args.compact_from,
             output_dir=args.compact_to,
-            output_file_count=args.compact_output_file_count,
-            compression=compression,
+            output_file_count=args.compact_output_file_count
         )
 
     if not args.layout:
@@ -378,7 +397,7 @@ def main():
 
     metadata = {
         "size": args.size,
-        "compression": args.compression,
+        "compression": "none",
         "seed": args.seed,
         "rows_per_file_small": args.rows_per_file,
         "requested_compact_files": args.compact_output_file_count,

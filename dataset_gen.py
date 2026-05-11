@@ -57,7 +57,7 @@ def make_batch(start_ts, rows, user_id_max, seed):
     return table
 
 
-def write_small_files(output_dir, total_rows, rows_per_file, compression, seed):
+def write_small_files(output_dir, total_rows, rows_per_file, seed):
     os.makedirs(output_dir, exist_ok=True)
     start_ts = datetime(2025, 1, 1, tzinfo=timezone.utc)
     num_files = (total_rows + rows_per_file - 1) // rows_per_file
@@ -73,7 +73,7 @@ def write_small_files(output_dir, total_rows, rows_per_file, compression, seed):
             seed=seed + file_idx,
         )
         file_path = os.path.join(output_dir, f"part-{file_idx:06d}.parquet")
-        pq.write_table(table, file_path, compression=compression, use_dictionary=True)
+        pq.write_table(table, file_path, compression="none", use_dictionary=True)
         written_rows += rows_this_file
 
         if (file_idx + 1) % 100 == 0 or file_idx == num_files - 1:
@@ -96,25 +96,18 @@ def main():
         default=10_000,
         help="Rows per Parquet file for small-files layout",
     )
-    parser.add_argument(
-        "--compression",
-        default="none",
-        choices=["snappy", "zstd", "gzip", "none"],
-        help="Parquet compression codec",
-    )
+
     parser.add_argument("--seed", type=int, default=67, help="Random seed")
     args = parser.parse_args()
 
     total_rows = SIZE_TO_ROWS[args.size]
-    compression = None if args.compression == "none" else args.compression
     output_dir = os.path.join(args.base_dir, "curated", args.dataset_id, "small")
 
     num_files, elapsed = write_small_files(
         output_dir=output_dir,
         total_rows=total_rows,
         rows_per_file=args.rows_per_file,
-        compression=compression,
-        seed=args.seed,
+        seed=args.seed
     )
 
     print("\n=== Dataset generation complete ===")
