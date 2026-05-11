@@ -333,15 +333,14 @@ def main():
     compact_file_count = None
     rows_per_compact_file = None
 
+    
+    if args.compact_from or args.compact_to:
+        generate_compact = True
+    else:
+        generate_compact = False
     # to_bench(**args) to do probably
-    to_bench(args.generate_small, args.small_output_dir, args.size, args.rows_per_file,
-             args.seed, generate_compact, args.compact_from, args.compact_to,
-             args.compact_output_file_count, args.layout, args.endpoint_url,
-             args.region_name, args.access_key, args.secret_key, args.query_start,
-             args.query_end, args.bucket, args.dataset_id, args.download_base_dir,
-             args.query_region, args.cleanup_prefix)
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.generate_small,
-             args.small_output_dir, args.rows_per_file, args.seed, args.generate_compact,
+             args.small_output_dir, args.rows_per_file, args.seed, generate_compact,
              args.compact_from, args.compact_to, args.compact_output_file_count, args.layout,
              args.region_name, args.access_key, args.secret_key, args.query_start,
              args.query_end, args.download_base_dir, args.query_region, args.cleanup_prefix)
