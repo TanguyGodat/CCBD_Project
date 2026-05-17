@@ -1,3 +1,5 @@
+# Authors : Tanguy Godat & Tim Gouvernon --Variant 3
+
 import argparse
 import csv
 import os
