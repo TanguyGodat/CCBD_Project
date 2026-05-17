@@ -1,3 +1,5 @@
+Authors : Tanguy Godat & Tim Gouvernon --Variant 3
+
 # CCBD_Project
 CCBD Projet variant 3
 
