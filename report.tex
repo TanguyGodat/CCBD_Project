@@ -1,14 +1,76 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
 
-\title{CCBD\_Project}
-\author{Tim Wyrfell}
+\title{Cloud Computing Project : Variant 3 — Small files problem \& compaction}
+\author{Tanguy Godat \& Tim Gouvernon}
 \date{April 2026}
 
 \begin{document}
 
 \maketitle
+\iffalse
+\section{TO-DO List}
+Faire script Dataset\\
+Générer Dataset\\
+Script compaction\\
+Décider si garder en local ou vm\\
 
-\section{Introduction}
+
+
+\section{Questions}
+Can we use os (import)\\
+Is the compacted file only in terms of number of files or also "compacting" data (ie. convert string to int with a dictionary) TO BOTH \\
+Order : dataset\_gen.py $\rightarrow$ compact.py $\rightarrow$ upload.py $\rightarrow$ bench.py $\rightarrow$ analysis.ipynb $\rightarrow$ download.py\\
+For now total size is 5.3GB, using rows size rather than size, should we go with more line ?\\
+What is Raw data for us ? NO\\
+Can we get a vm with 10GB so we have 4 core and not only one (azure)\\
+
+\section{Question: 04.05}
+In end-to-end pipeline time, do we have to do the compacted version also, if yes, do we have to generate the small fill version first then use the compaction script or generate a compact version immediately (tldr: avoid unnecessary small-file step but don't use compacted.py) TROUVER TOUTES LES LIGNES DE PARQUET\\
+Current usage of minio (s3) on the vm
+Show on
+\fi
+\section{Chosen Variant \& Methodology}
+
+\subsection{Chosen Variant}
+After reviewing the proposed project variants, we selected variant 3, which focuses on small files and compaction. This variant was considered the most relevant because it addresses a practical performance issue that can also be observed in everyday computer usage: handling many small files is often less efficient than handling fewer large files. Based on this intuition, the initial hypothesis was that workloads composed of many small files would require more processing time than equivalent workloads with larger files, with an expected slowdown on the order of a factor of three.
+
+\subsection{Methodology}
+The work was organized around a MinIO-based storage environment deployed in Docker, which provided a reproducible setup for testing file ingestion and retrieval. The first step was to prepare the dataset generator and the compaction script, since these two components defined the workloads that would later be benchmarked.
+
+Once the test data had been generated, the datasets were uploaded to MinIO and then downloaded again in order to measure the impact of file size and file count on storage performance. This allowed the comparison of small-file workloads with compacted workloads under the same experimental conditions.
+
+To evaluate the system consistently, benchmark runs were repeated for the different dataset scales S, M, and L. The benchmark results were collected for both upload and download operations, making it possible to compare performance before and after compaction and to observe how the effect evolved with dataset size.
+
+All experiments were performed in a controlled Docker environment to reduce variability and improve reproducibility. This setup also made it easier to rerun the tests, isolate the storage component, and compare results across multiple trials.
+\section{Work Repartition}
+
+A large part of the implementation was carried out collaboratively during live vocal sessions on Discord. In practice, most development followed a pair-programming approach: both team members discussed the design choices, reviewed the code together, and contributed to the implementation, even when the final commit was made from a single account. As a result, commit authorship does not always fully reflect the actual contribution to each script.
+
+To make the repartition clearer, the following list indicates the main responsibility areas of each team member, that is, the components for which each person contributed the most.
+
+\paragraph{Tanguy Godat}
+\begin{itemize}
+    \item \texttt{bench.py}
+    \item \texttt{upload.py}
+    \item \texttt{download.py}
+\end{itemize}
+
+\paragraph{Tim Gouvernon}
+\begin{itemize}
+    \item Docker and MinIO setup and handling
+    \item \texttt{dataset\_gen.py}
+    \item \texttt{compaction.py}
+    \item \texttt{analysis.ipynb}
+\end{itemize}
+
+Although the tasks above were divided by main area of responsibility, the project remained highly collaborative throughout its development. The implementation choices, debugging, and validation of results were discussed jointly, which means that both team members contributed to the overall design and execution of the project.
+
+\section{Experimental results}
+\section{Interpretation}
+\section{Recommendation}
+\section{Limitations \& threats to validity}
+
+
 
 \end{document}
