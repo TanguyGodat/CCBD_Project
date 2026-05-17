@@ -135,7 +135,7 @@ def main():
     parser.add_argument(
         "--output-compact-ratio",
         type=int,
-        required=True,
+        default= 25,
         help="Desired compaction ratio in the compact output layout"
     )
 
@@ -169,7 +169,7 @@ def main():
     print(f"Input path            : {input_dir}")
     print(f"Output path           : {output_dir}")
     print(f"Input file count      : {small_file_count}")
-    print(f"Requested output files: {args.output_file_count}")
+    print(f"Requested compaction rate: {args.output_compact_ratio}")
     print(f"Actual output files   : {compact_file_count}")
     print(f"Total rows            : {total_rows}")
     print(f"Rows per output file  : {rows_per_output_file}")

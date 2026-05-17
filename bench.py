@@ -20,7 +20,6 @@ from download import download_prefix, list_objects
 def ensure_empty_dir(path):
     if os.path.exists(path):
         shutil.rmtree(path)
-    os.makedirs(path, exist_ok=True)
 
 
 def ensure_parent_dir(path):
@@ -274,15 +273,123 @@ def parse_layout_arg(layout_arg):
         "s3_prefix": parts[2],
     }
 
-def to_bench(dataset_id, bucket, endpoint_url, size, generate_small = True, small_output_dir= None, rows_per_file= 10_000,
-             seed= 67, generate_compact = False, compact_from= None, compact_to= None,
-             compact_output_ratio= 25, layout= [],
-             region_name= "us-east-1", access_key= None, secret_key= None, query_start= "2025-01-15T00:00:00+00:00",
-             query_end= "2025-02-15T00:00:00+00:00", download_base_dir= "bench_downloads",
-             query_region= "tollgate_a1_geneva", cleanup_prefix= False):
+def to_bench(dataset_id: str, bucket: str, endpoint_url: str, size: int, layout_:list[str],
+             generate_small = True, small_output_dir= None, rows_per_file= 10_000,
+             seed= 67, compact_from = None, compact_to= None, compact_output_ratio= 25,
+             region_name= "us-east-1", access_key= None, secret_key= None,
+             query_start= "2025-01-15T00:00:00+00:00", query_end= "2025-02-15T00:00:00+00:00",
+             download_base_dir= "bench_downloads", query_region= "tollgate_a1_geneva",
+             cleanup_prefix= True, results_csv= "results/results.csv"):
     # test if input are correct first def check_input
     # if return yes -> def run_bench
-    pass
+    total_rows = SIZE_TO_ROWS[size]
+
+    generation_elapsed = None
+    generated_file_count = None
+    compaction_elapsed = None
+    compact_total_rows = None
+    compact_file_count = None
+    rows_per_compact_file = None
+
+    if generate_small:
+        if not small_output_dir:
+            raise ValueError("--small-output-dir is required with --generate-small")
+
+        print("\n=== Step 1: generate locally ===")
+        ensure_empty_dir(small_output_dir)
+        generated_file_count, generation_elapsed = write_small_files(
+            output_dir=small_output_dir,
+            total_rows=total_rows,
+            rows_per_file=rows_per_file,
+            seed=seed
+        )
+
+    if compact_from or compact_to:
+        if not compact_from or not compact_to:
+            raise ValueError("--compact-from and --compact-to must be provided together")
+
+        print("\n=== Step 2: compact locally ===")
+        ensure_empty_dir(compact_to)
+
+        compact_total_rows, compact_file_count, compaction_elapsed, rows_per_compact_file = compact_dataset(
+            input_dir=compact_from,
+            output_dir=compact_to,
+            output_compact_ratio=compact_output_ratio
+        )
+
+    if not layout_:
+        raise ValueError("Provide at least one --layout entry")
+
+    layouts = [parse_layout_arg(x) for x in layout_]
+
+    boto3_s3 = build_boto3_s3_client(
+        endpoint_url=endpoint_url,
+        region_name=region_name,
+        access_key=access_key,
+        secret_key=secret_key,
+    )
+
+    pyarrow_s3fs = build_pyarrow_s3_filesystem(
+        endpoint_url=endpoint_url,
+        region_name=region_name,
+        access_key=access_key,
+        secret_key=secret_key,
+    )
+
+    query_start = datetime.fromisoformat(query_start)
+    query_end = datetime.fromisoformat(query_end)
+
+    metadata = {
+        "size": size,
+        "compression": "none",
+        "seed": seed,
+        "rows_per_file_small": rows_per_file,
+        "requested_compact_ratio": compact_output_ratio, #changed from compact_output_file_count to compact_output_ratio
+        "total_rows_expected": total_rows,
+    }
+
+    result_rows = []
+
+    for layout in layouts:
+        print(f"\n=== Benchmarking layout: {layout['layout_name']} ===")
+        row = benchmark_one_layout(
+            boto3_s3=boto3_s3,
+            pyarrow_s3fs=pyarrow_s3fs,
+            bucket=bucket,
+            dataset_id=dataset_id,
+            layout_name=layout["layout_name"],
+            local_source_dir=layout["local_source_dir"],
+            s3_prefix=layout["s3_prefix"],
+            download_base_dir=download_base_dir,
+            query_region=query_region,
+            query_start=query_start,
+            query_end=query_end,
+            metadata=metadata,
+            cleanup_prefix=cleanup_prefix,
+        )
+
+        row["generation_elapsed_s"] = round(generation_elapsed, 6) if generation_elapsed is not None else ""
+        row["generated_small_file_count"] = generated_file_count if generated_file_count is not None else ""
+        row["compaction_elapsed_s"] = round(compaction_elapsed, 6) if compaction_elapsed is not None else ""
+        row["compact_total_rows"] = compact_total_rows if compact_total_rows is not None else ""
+        row["compact_actual_file_count"] = compact_file_count if compact_file_count is not None else ""
+        row["compact_rows_per_output_file"] = rows_per_compact_file if rows_per_compact_file is not None else ""
+
+        result_rows.append(row)
+
+    append_results(results_csv, result_rows)
+
+    print("\n=== Benchmark complete ===")
+    print(f"Results CSV: {results_csv}")
+    for row in result_rows:
+        print(
+            f"layout={row['layout']} "
+            f"objects={row['listing_object_count']} "
+            f"upload_mb_s={row['upload_throughput_mb_s']} "
+            f"listing_s={row['listing_elapsed_s']} "
+            f"query_s3_s={row['query_elapsed_s']} "
+            f"download_mb_s={row['download_throughput_mb_s']}"
+        )
 
 
 def main():
@@ -292,7 +399,7 @@ def main():
 
     parser.add_argument("--dataset-id", required=True, help="Logical dataset id, e.g. tollgate_s")
     parser.add_argument("--size", choices=["S", "M", "L"], required=True, help="Dataset size preset")
-    parser.add_argument("--base-dir", default="data", help="Base working directory")
+    # parser.add_argument("--base-dir", default="data", help="Base working directory")
     parser.add_argument("--download-base-dir", default="bench_downloads", help="Base directory for downloaded benchmark copies")
     parser.add_argument("--results-csv", default="results/results.csv", help="CSV output path on the VM")
     parser.add_argument("--rows-per-file", type=int, default=10_000, help="Rows per small Parquet file")
@@ -310,11 +417,11 @@ def main():
     parser.add_argument("--query-start", default="2025-01-15T00:00:00+00:00", help="Inclusive query start ISO-8601")
     parser.add_argument("--query-end", default="2025-02-15T00:00:00+00:00", help="Exclusive query end ISO-8601")
 
-    parser.add_argument("--generate-small", action="store_true", help="Generate a local small-files dataset")
+    parser.add_argument("--generate-small", type=bool, default=True, help="Generate a local small-files dataset")
     parser.add_argument("--small-output-dir", default=None, help="Local output dir for generated small dataset")
     parser.add_argument("--compact-from", default=None, help="Local input dir to compact")
     parser.add_argument("--compact-to", default=None, help="Local output dir for compacted dataset")
-    parser.add_argument("--cleanup-prefix", action="store_true", help="Delete existing objects under each tested S3 prefix before upload")
+    parser.add_argument("--cleanup-prefix", type=bool, default= True, help="Delete existing objects under each tested S3 prefix before upload")
 
     parser.add_argument(
         "--layout",
@@ -325,127 +432,11 @@ def main():
 
     args = parser.parse_args()
 
-    total_rows = SIZE_TO_ROWS[args.size]
-
-    generation_elapsed = None
-    generated_file_count = None
-    compaction_elapsed = None
-    compact_total_rows = None
-    compact_file_count = None
-    rows_per_compact_file = None
-
-    
-    if args.compact_from or args.compact_to:
-        generate_compact = True
-    else:
-        generate_compact = False
-    # to_bench(**args) to do probably
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.generate_small,
-             args.small_output_dir, args.rows_per_file, args.seed, generate_compact,
+             args.small_output_dir, args.rows_per_file, args.seed,
              args.compact_from, args.compact_to, args.compact_output_ratio, args.layout,
              args.region_name, args.access_key, args.secret_key, args.query_start,
              args.query_end, args.download_base_dir, args.query_region, args.cleanup_prefix)
-
-    if args.generate_small:
-        if not args.small_output_dir:
-            raise ValueError("--small-output-dir is required with --generate-small")
-
-        print("\n=== Step 1: generate locally ===")
-        ensure_empty_dir(args.small_output_dir)
-        generated_file_count, generation_elapsed = write_small_files(
-            output_dir=args.small_output_dir,
-            total_rows=total_rows,
-            rows_per_file=args.rows_per_file,
-            seed=args.seed
-        )
-
-    if args.compact_from or args.compact_to:
-        if not args.compact_from or not args.compact_to:
-            raise ValueError("--compact-from and --compact-to must be provided together")
-
-        print("\n=== Step 2: compact locally ===")
-        if os.path.exists(args.compact_to):
-            shutil.rmtree(args.compact_to)
-
-        compact_total_rows, compact_file_count, compaction_elapsed, rows_per_compact_file = compact_dataset(
-            input_dir=args.compact_from,
-            output_dir=args.compact_to,
-            output_compact_ratio=args.compact_output_ratio
-        )
-
-    if not args.layout:
-        raise ValueError("Provide at least one --layout entry")
-
-    layouts = [parse_layout_arg(x) for x in args.layout]
-
-    boto3_s3 = build_boto3_s3_client(
-        endpoint_url=args.endpoint_url,
-        region_name=args.region_name,
-        access_key=args.access_key,
-        secret_key=args.secret_key,
-    )
-
-    pyarrow_s3fs = build_pyarrow_s3_filesystem(
-        endpoint_url=args.endpoint_url,
-        region_name=args.region_name,
-        access_key=args.access_key,
-        secret_key=args.secret_key,
-    )
-
-    query_start = datetime.fromisoformat(args.query_start)
-    query_end = datetime.fromisoformat(args.query_end)
-
-    metadata = {
-        "size": args.size,
-        "compression": "none",
-        "seed": args.seed,
-        "rows_per_file_small": args.rows_per_file,
-        "requested_compact_files": args.compact_output_ratio, #changed from compact_output_file_count to compact_output_ratio
-        "total_rows_expected": total_rows,
-    }
-
-    result_rows = []
-
-    for layout in layouts:
-        print(f"\n=== Benchmarking layout: {layout['layout_name']} ===")
-        row = benchmark_one_layout(
-            boto3_s3=boto3_s3,
-            pyarrow_s3fs=pyarrow_s3fs,
-            bucket=args.bucket,
-            dataset_id=args.dataset_id,
-            layout_name=layout["layout_name"],
-            local_source_dir=layout["local_source_dir"],
-            s3_prefix=layout["s3_prefix"],
-            download_base_dir=args.download_base_dir,
-            query_region=args.query_region,
-            query_start=query_start,
-            query_end=query_end,
-            metadata=metadata,
-            cleanup_prefix=args.cleanup_prefix,
-        )
-
-        row["generation_elapsed_s"] = round(generation_elapsed, 6) if generation_elapsed is not None else ""
-        row["generated_small_file_count"] = generated_file_count if generated_file_count is not None else ""
-        row["compaction_elapsed_s"] = round(compaction_elapsed, 6) if compaction_elapsed is not None else ""
-        row["compact_total_rows"] = compact_total_rows if compact_total_rows is not None else ""
-        row["compact_actual_file_count"] = compact_file_count if compact_file_count is not None else ""
-        row["compact_rows_per_output_file"] = rows_per_compact_file if rows_per_compact_file is not None else ""
-
-        result_rows.append(row)
-
-    append_results(args.results_csv, result_rows)
-
-    print("\n=== Benchmark complete ===")
-    print(f"Results CSV: {args.results_csv}")
-    for row in result_rows:
-        print(
-            f"layout={row['layout']} "
-            f"objects={row['listing_object_count']} "
-            f"upload_mb_s={row['upload_throughput_mb_s']} "
-            f"listing_s={row['listing_elapsed_s']} "
-            f"query_s3_s={row['query_elapsed_s']} "
-            f"download_mb_s={row['download_throughput_mb_s']}"
-        )
 
 
 if __name__ == "__main__":
