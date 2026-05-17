@@ -276,7 +276,7 @@ def parse_layout_arg(layout_arg):
 
 def to_bench(dataset_id, bucket, endpoint_url, size, generate_small = True, small_output_dir= None, rows_per_file= 10_000,
              seed= 67, generate_compact = False, compact_from= None, compact_to= None,
-             compact_output_file_count= 250_000, layout= [],
+             compact_output_ratio= 25, layout= [],
              region_name= "us-east-1", access_key= None, secret_key= None, query_start= "2025-01-15T00:00:00+00:00",
              query_end= "2025-02-15T00:00:00+00:00", download_base_dir= "bench_downloads",
              query_region= "tollgate_a1_geneva", cleanup_prefix= False):
@@ -296,7 +296,8 @@ def main():
     parser.add_argument("--download-base-dir", default="bench_downloads", help="Base directory for downloaded benchmark copies")
     parser.add_argument("--results-csv", default="results/results.csv", help="CSV output path on the VM")
     parser.add_argument("--rows-per-file", type=int, default=10_000, help="Rows per small Parquet file")
-    parser.add_argument("--compact-output-file-count", type=int, default=20, help="Target number of compact files")
+    # parser.add_argument("--compact-output-file-count", type=int, default=20, help="Target number of compact files")
+    parser.add_argument("--compact-output-ratio", type=int, default=25, help="Compacting ratio desired")
     parser.add_argument("--seed", type=int, default=67, help="Random seed")
 
     parser.add_argument("--bucket", required=True, help="MinIO/S3 bucket")
@@ -341,7 +342,7 @@ def main():
     # to_bench(**args) to do probably
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.generate_small,
              args.small_output_dir, args.rows_per_file, args.seed, generate_compact,
-             args.compact_from, args.compact_to, args.compact_output_file_count, args.layout,
+             args.compact_from, args.compact_to, args.compact_output_ratio, args.layout,
              args.region_name, args.access_key, args.secret_key, args.query_start,
              args.query_end, args.download_base_dir, args.query_region, args.cleanup_prefix)
 
@@ -369,7 +370,7 @@ def main():
         compact_total_rows, compact_file_count, compaction_elapsed, rows_per_compact_file = compact_dataset(
             input_dir=args.compact_from,
             output_dir=args.compact_to,
-            output_file_count=args.compact_output_file_count
+            output_compact_ratio=args.compact_output_ratio
         )
 
     if not args.layout:
@@ -399,7 +400,7 @@ def main():
         "compression": "none",
         "seed": args.seed,
         "rows_per_file_small": args.rows_per_file,
-        "requested_compact_files": args.compact_output_file_count,
+        "requested_compact_files": args.compact_output_ratio, #changed from compact_output_file_count to compact_output_ratio
         "total_rows_expected": total_rows,
     }
 

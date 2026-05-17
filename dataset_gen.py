@@ -117,7 +117,7 @@ def main():
     print(f"Total rows : {total_rows}")
     print(f"Rows per file : {args.rows_per_file}")
     print(f"Files created : {num_files}")
-    print(f"Compression : {args.compression}")
+    print(f"Compression : {"none"}")
     print(f"Elapsed time : {elapsed:.2f} seconds")
     print(f"Output path : {output_dir}")
 

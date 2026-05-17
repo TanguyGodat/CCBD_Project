@@ -18,7 +18,7 @@ def count_parquet_files(directory):
     return count
 
 
-def compact_dataset(input_dir, output_dir, output_file_count):
+def compact_dataset(input_dir, output_dir, output_compact_ratio):
     """
     Read a small-files Parquet dataset and rewrite it as a chosen number
     of larger Parquet files.
@@ -32,13 +32,20 @@ def compact_dataset(input_dir, output_dir, output_file_count):
             f"Remove it first or choose another output path."
         )
 
-    if output_file_count <= 0:
+    if output_compact_ratio <= 0:
         raise ValueError("output_file_count must be > 0")
 
     os.makedirs(output_dir, exist_ok=True)
 
     dataset = ds.dataset(input_dir, format="parquet")
     total_rows = dataset.count_rows()
+
+    small_file_count = count_parquet_files(input_dir)
+
+    # make a function taking total_rows and small_file_count and returning output_file_count and rows_per_output_file
+
+    # Compute the target number of compacted output files
+    output_file_count = (small_file_count + output_compact_ratio - 1) // output_compact_ratio
 
     # Compute the target number of rows per compacted output file.
     rows_per_output_file = (total_rows + output_file_count - 1) // output_file_count
@@ -119,12 +126,19 @@ def main():
         default="data",
         help="Base directory containing curated/<dataset_id>/small"
     )
+    # parser.add_argument(
+    #     "--output-file-count",
+    #     type=int,
+    #     required=True,
+    #     help="Desired number of files in the compact output layout"
+    # )
     parser.add_argument(
-        "--output-file-count",
+        "--output-compact-ratio",
         type=int,
         required=True,
-        help="Desired number of files in the compact output layout"
+        help="Desired compaction ratio in the compact output layout"
     )
+
 
     args = parser.parse_args()
 
@@ -147,7 +161,7 @@ def main():
     total_rows, compact_file_count, elapsed, rows_per_output_file = compact_dataset(
         input_dir=input_dir,
         output_dir=output_dir,
-        output_file_count=args.output_file_count
+        output_compact_ratio=args.output_compact_ratio
     )
 
     print("\n=== Compaction complete ===")
