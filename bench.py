@@ -19,9 +19,13 @@ from upload import upload_directory
 from download import download_prefix, list_objects
 
 
-def ensure_empty_dir(path):
+def ensure_empty_dir(path, create_new= True):
     if os.path.exists(path):
+        # if the directory exists, delete it
         shutil.rmtree(path)
+    if create_new:
+        # re-create the deleted directory
+        os.makedirs(path, exist_ok=True)
 
 
 def ensure_parent_dir(path):
@@ -311,7 +315,7 @@ def to_bench(dataset_id: str, bucket: str, endpoint_url: str, size: int, layout_
             raise ValueError("--compact-from and --compact-to must be provided together")
 
         print("\n=== Step 2: compact locally ===")
-        ensure_empty_dir(compact_to)
+        ensure_empty_dir(compact_to, False)
 
         compact_total_rows, compact_file_count, compaction_elapsed, rows_per_compact_file = compact_dataset(
             input_dir=compact_from,
