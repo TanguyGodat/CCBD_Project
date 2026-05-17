@@ -66,10 +66,10 @@ Example environment values:
 
 ```bash
 export S3_ENDPOINT="http://localhost:9000"
-export S3_BUCKET="bench"
+export S3_BUCKET="ccbd"
 export S3_REGION="us-east-1"
 export S3_ACCESS_KEY="minioadmin"
-export S3_SECRET_KEY="minioadmin"
+export S3_SECRET_KEY="minioadmin123"
 ```
 
 ## How to run
