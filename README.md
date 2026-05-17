@@ -165,7 +165,6 @@ python bench.py \
   --rows-per-file 10000 \
   --compact-output-ratio 25 \
   --seed 67 \
-  --generate-small True \
   --small-output-dir data/curated/tollgate_s/small \
   --compact-from data/curated/tollgate_s/small \
   --compact-to data/curated/tollgate_s/compact \
@@ -174,7 +173,6 @@ python bench.py \
   --query-region tollgate_a1_geneva \
   --query-start 2025-01-15T00:00:00+00:00 \
   --query-end 2025-02-15T00:00:00+00:00 \
-  --cleanup-prefix True \
   --layout small::data/curated/tollgate_s/small::bench/tollgate_s/small \
   --layout compact::data/curated/tollgate_s/compact::bench/tollgate_s/compact
 ```
@@ -195,7 +193,6 @@ python bench.py \
   --rows-per-file 10000 \
   --compact-output-ratio 25 \
   --seed 67 \
-  --generate-small True \
   --small-output-dir data/curated/tollgate_m/small \
   --compact-from data/curated/tollgate_m/small \
   --compact-to data/curated/tollgate_m/compact \
@@ -204,7 +201,6 @@ python bench.py \
   --query-region tollgate_a1_geneva \
   --query-start 2025-01-15T00:00:00+00:00 \
   --query-end 2025-02-15T00:00:00+00:00 \
-  --cleanup-prefix True \
   --layout small::data/curated/tollgate_m/small::bench/tollgate_m/small \
   --layout compact::data/curated/tollgate_m/compact::bench/tollgate_m/compact
 ```
@@ -223,7 +219,6 @@ python bench.py \
   --rows-per-file 10000 \
   --compact-output-ratio 25 \
   --seed 67 \
-  --generate-small True \
   --small-output-dir data/curated/tollgate_l/small \
   --compact-from data/curated/tollgate_l/small \
   --compact-to data/curated/tollgate_l/compact \
@@ -232,7 +227,6 @@ python bench.py \
   --query-region tollgate_a1_geneva \
   --query-start 2025-01-15T00:00:00+00:00 \
   --query-end 2025-02-15T00:00:00+00:00 \
-  --cleanup-prefix True \
   --layout small::data/curated/tollgate_l/small::bench/tollgate_l/small \
   --layout compact::data/curated/tollgate_l/compact::bench/tollgate_l/compact
 ```
