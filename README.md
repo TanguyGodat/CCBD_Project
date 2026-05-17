@@ -55,6 +55,21 @@ pip install -r requirements.txt
 
 The scripts use a MinIO/S3-compatible endpoint and accept the endpoint configuration through command-line arguments. Upload, download, and benchmark scripts all require an endpoint URL and bucket name, and they optionally accept an access key, secret key, and region.
 
+Docker setup:
+```bash
+rm -rf ~/minio/data
+sudo mkdir -p ~/minio/data
+
+sudo docker run -d \
+  --name minio \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin123 \
+  -v ~/minio/data:/data \
+  quay.io/minio/minio server /data --console-address ":9001"
+```
+
 Typical parameters are:
 - `--endpoint-url`: MinIO/S3 endpoint, for example `http://localhost:9000`
 - `--bucket`: target bucket name
