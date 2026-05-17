@@ -22,10 +22,9 @@ def list_objects(s3_client, bucket, prefix):
             if not key.endswith("/"):
                 keys.append(key)
 
-        if resp.get("IsTruncated"):
-            token = resp.get("NextContinuationToken")
-        else:
+        if not resp.get("IsTruncated"):
             break
+        token = resp.get("NextContinuationToken")
 
     return sorted(keys)
 
