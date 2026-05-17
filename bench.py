@@ -234,6 +234,9 @@ def benchmark_one_layout(
     download_throughput_mb_s = (
         (download_bytes / (1024 * 1024)) / download_elapsed if download_elapsed > 0 else 0.0
     )
+    
+    # to create storage space
+    ensure_empty_dir(local_source_dir, False)
 
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
