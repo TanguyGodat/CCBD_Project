@@ -244,7 +244,7 @@ def benchmark_one_layout(
         "compression": metadata["compression"],
         "seed": metadata["seed"],
         "rows_per_file_small": metadata["rows_per_file_small"],
-        "requested_compact_files": metadata["requested_compact_files"],
+        "requested_compact_ratio": metadata["requested_compact_ratio"],
         "total_rows_expected": metadata["total_rows_expected"],
         "query_region": query_region,
         "query_start_ts": query_start.isoformat(),
