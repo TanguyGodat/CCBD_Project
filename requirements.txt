@@ -1,0 +1,7 @@
+boto3
+numpy
+pyarrow
+pandas
+matplotlib
+jupyter
+ipykernel
