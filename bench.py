@@ -12,6 +12,7 @@ import boto3
 import pyarrow as pa
 import pyarrow.dataset as ds
 from pyarrow import fs
+from botocore.config import Config
 
 from dataset_gen import SIZE_TO_ROWS, write_small_files
 from compact import compact_dataset, count_parquet_files
@@ -44,14 +45,19 @@ def dir_size_bytes(directory):
 
 def build_boto3_s3_client(endpoint_url, region_name, access_key=None, secret_key=None):
     kwargs = {
-        "endpoint_url": endpoint_url,
+        "endpoint_url": endpoint_url.rstrip("/"),
         "region_name": region_name,
+        "config": Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+        ),
     }
+
     if access_key and secret_key:
         kwargs["aws_access_key_id"] = access_key
         kwargs["aws_secret_access_key"] = secret_key
-    return boto3.client("s3", **kwargs)
 
+    return boto3.client("s3", **kwargs)
 
 def build_pyarrow_s3_filesystem(endpoint_url, region_name, access_key=None, secret_key=None):
     endpoint = endpoint_url.replace("http://", "").replace("https://", "")
