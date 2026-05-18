@@ -451,7 +451,8 @@ def main():
              args.generate_small, args.small_output_dir, args.rows_per_file, args.seed,
              args.compact_from, args.compact_to, args.compact_output_ratio,
              args.region_name, args.access_key, args.secret_key, args.query_start,
-             args.query_end, args.download_base_dir, args.query_region, args.cleanup_prefix)
+             args.query_end, args.download_base_dir, args.query_region, args.cleanup_prefix,
+             args.results_csv)
 
 
 if __name__ == "__main__":
