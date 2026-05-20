@@ -1,5 +1,5 @@
 --endpoint-url=http://localhost:9000
 --bucket=ccbd
---region-name=us-east-1 
+--region-name=us-east-1
 --access-key=minioadmin
 --secret-key=minioadmin123
