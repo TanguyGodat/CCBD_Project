@@ -411,13 +411,12 @@ def to_bench(dataset_id: str, bucket: str, endpoint_url: str, size: int, layout_
 def build_parser():
     
     parser = argparse.ArgumentParser(
-        description="Generic Variant 3 benchmark: local generation/compaction, MinIO upload/listing/direct-S3-query/download, CSV output on VM"
+        description="Generic Variant 3 benchmark: local generation/compaction, MinIO upload/listing/direct-S3-query/download, CSV output on VM",
+        fromfile_prefix_chars="@"
     )
 
-    parser.add_argument("--config", type=str, help="YAML config file")
-
-    parser.add_argument("--dataset-id", help="Logical dataset id, e.g. tollgate_s")
-    parser.add_argument("--size", choices=["S", "M", "L"], help="Dataset size preset")
+    parser.add_argument("--dataset-id", required=True, help="Logical dataset id, e.g. tollgate_s")
+    parser.add_argument("--size", required=True, type=str, choices=["S", "M", "L"], help="Dataset size preset")
     # parser.add_argument("--base-dir", default="data", help="Base working directory")
     parser.add_argument("--download-base-dir", default="bench_downloads", help="Base directory for downloaded benchmark copies")
     parser.add_argument("--results-csv", default="results/results.csv", help="CSV output path on the VM")
@@ -426,8 +425,8 @@ def build_parser():
     parser.add_argument("--compact-output-ratio", type=int, default=25, help="Compacting ratio desired")
     parser.add_argument("--seed", type=int, default=67, help="Random seed")
 
-    parser.add_argument("--bucket", help="MinIO/S3 bucket")
-    parser.add_argument("--endpoint-url", help="MinIO/S3 endpoint URL")
+    parser.add_argument("--bucket", required=True, help="MinIO/S3 bucket")
+    parser.add_argument("--endpoint-url", required=True, help="MinIO/S3 endpoint URL")
     parser.add_argument("--region-name", default="us-east-1", help="S3 region name")
     parser.add_argument("--access-key", default=None, help="S3 access key")
     parser.add_argument("--secret-key", default=None, help="S3 secret key")
@@ -451,29 +450,12 @@ def build_parser():
 
     return parser
 
-def apply_parser(parser):
-    cfg_args, remaining = parser.parse_known_args()
-
-    if cfg_args.config:
-        with open(cfg_args.config, "r", encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
-        parser.set_defaults(**cfg)
-
-    pars = parser.parse_args(remaining)
-
-    required_parse = ["dataset_id", "size", "bucket", "endpoint_url"]
-    missing = [name for name in required_parse if getattr(pars, name, None) is None]
-    if missing:
-        parser.error(f"missing required arguments: {", ".join(missing)}")
-    
-    return pars
-
-
 def main():
 
-    pars = build_parser()
-    args = apply_parser(pars)
-
+    parser_ = build_parser()
+    args = parser_.parse_args()
+    
+    print(f"args: {args}")
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.layout,
              args.generate_small, args.small_output_dir, args.rows_per_file, args.seed,
              args.compact_from, args.compact_to, args.compact_output_ratio,

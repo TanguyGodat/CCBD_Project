@@ -1,0 +1,14 @@
+--dataset-id=tollgate_s
+--size=S
+--rows-per-file=10000
+--compact-output-ratio=25
+--seed=67
+--small-output-dir=data/curated/tollgate_s/small
+--compact-from=data/curated/tollgate_s/small
+--compact-to=data/curated/tollgate_s/compact
+--download-base-dir=bench_downloads
+--results-csv="results/results.csv"
+--query-region="tollgate_a1_geneva"
+--query-start="2025-01-15T00:00:00+00:00"
+--query-end="2025-02-15T00:00:00+00:00"
+--layout=compact::data/curated/tollgate_s/compact::bench/tollgate_s/compact
