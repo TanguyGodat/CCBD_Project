@@ -1,13 +1,13 @@
 # Authors : Tanguy Godat & Tim Gouvernon --Variant 3
 
-# import argparse
+import argparse
 import csv
 import os
 import shutil
 import socket
 import time
 from datetime import datetime, timezone
-from yamlargparse import ArgumentParser
+import yaml
 
 import boto3
 import pyarrow as pa
@@ -410,11 +410,11 @@ def to_bench(dataset_id: str, bucket: str, endpoint_url: str, size: int, layout_
 
 def build_parser():
     
-    parser = ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Generic Variant 3 benchmark: local generation/compaction, MinIO upload/listing/direct-S3-query/download, CSV output on VM"
     )
 
-    parser.add_argument("--config", action="config", help="YAML config file")
+    parser.add_argument("--config", help="YAML config file")
 
     parser.add_argument("--dataset-id", required=True, help="Logical dataset id, e.g. tollgate_s")
     parser.add_argument("--size", choices=["S", "M", "L"], required=True, help="Dataset size preset")
@@ -449,12 +449,20 @@ def build_parser():
         help="Layout definition: layout_name::local_source_dir::s3_prefix (repeatable)",
     )
 
-    return parser
+    cfg_args, remaining = parser.parse_known_args()
+
+    if cfg_args.config:
+        with open(cfg_args.config, "r") as f:
+            cfg = yaml.safe_load(f) or {}
+        parser.set_defaults(**cfg)
+
+    pars = parser.parse_args(remaining)
+    return pars
 
 
 def main():
-    pars = build_parser()
-    args = pars.parse_args()
+
+    args = build_parser()
 
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.layout,
              args.generate_small, args.small_output_dir, args.rows_per_file, args.seed,
