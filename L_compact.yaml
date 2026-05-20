@@ -1,0 +1,21 @@
+
+dataset-id: tollgate_l
+size: L
+bucket: "$S3_BUCKET"
+endpoint-url: "$S3_ENDPOINT"
+region-name: "$S3_REGION"
+access-key: "$S3_ACCESS_KEY"
+secret-key: "$S3_SECRET_KEY"
+rows-per-file: 10000
+compact-output-ratio: 25
+seed: 67
+small-output-dir: data/curated/tollgate_l/small
+compact-from: data/curated/tollgate_l/small
+compact-to: data/curated/tollgate_l/compact
+download-base-dir: bench_downloads
+results-csv: "results/results.csv"
+query-region: "tollgate_a1_geneva"
+query-start: "2025-01-15T00:00:00+00:00"
+query-end: "2025-02-15T00:00:00+00:00"
+layout:
+  - compact::data/curated/tollgate_l/compact::bench/tollgate_l/compact
