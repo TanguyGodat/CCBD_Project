@@ -20,8 +20,6 @@ from compact import compact_dataset, count_parquet_files
 from upload import upload_directory
 from download import download_prefix, list_objects
 
-REQUIRED_PARSE = ["dataset_id", "size", "bucket", "endpoint_url"]
-
 
 def ensure_empty_dir(path, create_new= True):
     if os.path.exists(path):
@@ -416,7 +414,7 @@ def build_parser():
         description="Generic Variant 3 benchmark: local generation/compaction, MinIO upload/listing/direct-S3-query/download, CSV output on VM"
     )
 
-    parser.add_argument("--config", help="YAML config file")
+    parser.add_argument("--config", type=str, help="YAML config file")
 
     parser.add_argument("--dataset-id", help="Logical dataset id, e.g. tollgate_s")
     parser.add_argument("--size", choices=["S", "M", "L"], help="Dataset size preset")
@@ -463,7 +461,8 @@ def apply_parser(parser):
 
     pars = parser.parse_args(remaining)
 
-    missing = [name for name in REQUIRED_PARSE if getattr(pars, name) is None]
+    required_parse = ["dataset_id", "size", "bucket", "endpoint_url"]
+    missing = [name for name in required_parse if getattr(pars, name, None) is None]
     if missing:
         parser.error(f"missing required arguments: {", ".join(missing)}")
     
