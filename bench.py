@@ -20,6 +20,8 @@ from compact import compact_dataset, count_parquet_files
 from upload import upload_directory
 from download import download_prefix, list_objects
 
+REQUIRED_PARSE = ["dataset_id", "size", "bucket", "endpoint_url"]
+
 
 def ensure_empty_dir(path, create_new= True):
     if os.path.exists(path):
@@ -416,8 +418,8 @@ def build_parser():
 
     parser.add_argument("--config", help="YAML config file")
 
-    parser.add_argument("--dataset-id", required=True, help="Logical dataset id, e.g. tollgate_s")
-    parser.add_argument("--size", choices=["S", "M", "L"], required=True, help="Dataset size preset")
+    parser.add_argument("--dataset-id", help="Logical dataset id, e.g. tollgate_s")
+    parser.add_argument("--size", choices=["S", "M", "L"], help="Dataset size preset")
     # parser.add_argument("--base-dir", default="data", help="Base working directory")
     parser.add_argument("--download-base-dir", default="bench_downloads", help="Base directory for downloaded benchmark copies")
     parser.add_argument("--results-csv", default="results/results.csv", help="CSV output path on the VM")
@@ -426,8 +428,8 @@ def build_parser():
     parser.add_argument("--compact-output-ratio", type=int, default=25, help="Compacting ratio desired")
     parser.add_argument("--seed", type=int, default=67, help="Random seed")
 
-    parser.add_argument("--bucket", required=True, help="MinIO/S3 bucket")
-    parser.add_argument("--endpoint-url", required=True, help="MinIO/S3 endpoint URL")
+    parser.add_argument("--bucket", help="MinIO/S3 bucket")
+    parser.add_argument("--endpoint-url", help="MinIO/S3 endpoint URL")
     parser.add_argument("--region-name", default="us-east-1", help="S3 region name")
     parser.add_argument("--access-key", default=None, help="S3 access key")
     parser.add_argument("--secret-key", default=None, help="S3 secret key")
@@ -449,6 +451,9 @@ def build_parser():
         help="Layout definition: layout_name::local_source_dir::s3_prefix (repeatable)",
     )
 
+    return parser
+
+def apply_parser(parser):
     cfg_args, remaining = parser.parse_known_args()
 
     if cfg_args.config:
@@ -457,12 +462,18 @@ def build_parser():
         parser.set_defaults(**cfg)
 
     pars = parser.parse_args(remaining)
+
+    missing = [name for name in REQUIRED_PARSE if getattr(pars, name) is None]
+    if missing:
+        parser.error(f"missing required arguments: {", ".join(missing)}")
+    
     return pars
 
 
 def main():
 
-    args = build_parser()
+    pars = build_parser()
+    args = apply_parser(pars)
 
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.layout,
              args.generate_small, args.small_output_dir, args.rows_per_file, args.seed,
