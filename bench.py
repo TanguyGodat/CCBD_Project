@@ -452,7 +452,7 @@ def build_parser():
     cfg_args, remaining = parser.parse_known_args()
 
     if cfg_args.config:
-        with open(cfg_args.config, "r") as f:
+        with open(cfg_args.config, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f) or {}
         parser.set_defaults(**cfg)
 
