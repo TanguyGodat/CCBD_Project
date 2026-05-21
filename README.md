@@ -67,13 +67,13 @@ cd /home/ubuntu/repro
 ### 2. Build the image
 
 ```bash
-docker build -t ccbd-project .
+sudo docker build -t ccbd-project .
 ```
 
 ### 3. Start the container
 
 ```bash
-docker run --rm -it \
+sudo docker run --rm -it \
   -p 9000:9000 \
   -p 9001:9001 \
   -v "$(pwd)/results:/opt/CCBD_Project/results" \
