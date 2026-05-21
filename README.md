@@ -41,13 +41,36 @@ pip install -r requirements.txt
 
 The recommended workflow is to run the benchmark inside Docker. The container installs Python, MinIO, and the MinIO client, clones the repository, creates a virtual environment, installs the Python dependencies, and starts a local MinIO service through `entrypoint.sh`.
 
-### 1. Build the image
+### 1. Get the `Dockerfile` and `entrypoint.sh` onto the VM
+
+On the VM:
+
+```bash
+cd
+mkdir -p repro
+cd /home/ubuntu/repro
+```
+
+On your local machine:
+
+```bash
+scp "/path/to/Dockerfile" ubuntu@ccbd-2026-XX.maas:/home/ubuntu/repro/
+scp "/path/to/entrypoint.sh" ubuntu@ccbd-2026-XX.maas:/home/ubuntu/repro/
+```
+
+Back on the VM:
+
+```bash
+cd /home/ubuntu/repro
+```
+
+### 2. Build the image
 
 ```bash
 docker build -t ccbd-project .
 ```
 
-### 2. Start the container
+### 3. Start the container
 
 ```bash
 docker run --rm -it \
@@ -57,7 +80,7 @@ docker run --rm -it \
   ccbd-project
 ```
 
-This starts the MinIO S3 API on `http://localhost:9000` and the MinIO console on `http://localhost:9001`. The results directory is mounted so that CSV outputs written inside the container are immediately available on the host
+This starts the MinIO S3 API on `http://localhost:9000` and the MinIO console on `http://localhost:9001`. The results directory is mounted so that CSV outputs written inside the container are immediately available on the host.
 
 ## S3 configuration file
 
