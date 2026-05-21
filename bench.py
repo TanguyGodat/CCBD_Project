@@ -7,7 +7,6 @@ import shutil
 import socket
 import time
 from datetime import datetime, timezone
-import yaml
 
 import boto3
 import pyarrow as pa
@@ -31,6 +30,8 @@ def ensure_empty_dir(path, create_new= True):
 
 
 def ensure_parent_dir(path):
+    '''create the parent directory for a path
+    if it does not already exist'''
     parent = os.path.dirname(path)
     if parent:
         os.makedirs(parent, exist_ok=True)
@@ -182,6 +183,7 @@ def benchmark_one_layout(
     metadata,
     cleanup_prefix=True,
 ):
+    '''benchmark the upload, listing, query and download'''
     if not os.path.exists(local_source_dir):
         raise FileNotFoundError(f"Local source directory does not exist: {local_source_dir}")
 
@@ -197,6 +199,7 @@ def benchmark_one_layout(
     local_file_count = count_parquet_files(local_source_dir)
     local_total_bytes = dir_size_bytes(local_source_dir)
 
+    # upload
     upload_bytes, upload_file_count, upload_elapsed = upload_directory(
         s3_client=boto3_s3,
         bucket=bucket,
@@ -204,12 +207,14 @@ def benchmark_one_layout(
         s3_prefix=s3_prefix,
     )
 
+    # listing
     listing_object_count, listing_total_bytes, listing_elapsed = measure_listing(
         s3_client=boto3_s3,
         bucket=bucket,
         prefix=s3_prefix,
     )
 
+    # query
     query_metrics = run_fixed_query_on_s3(
         pyarrow_s3fs=pyarrow_s3fs,
         bucket=bucket,
@@ -222,6 +227,7 @@ def benchmark_one_layout(
     download_dir = os.path.join(download_base_dir, dataset_id, layout_name)
     ensure_empty_dir(download_dir)
 
+    # download
     download_bytes, download_file_count, download_elapsed = download_prefix(
         s3_client=boto3_s3,
         bucket=bucket,
@@ -235,7 +241,7 @@ def benchmark_one_layout(
     download_throughput_mb_s = (
         (download_bytes / (1024 * 1024)) / download_elapsed if download_elapsed > 0 else 0.0
     )
-    
+
     # to create storage space
     ensure_empty_dir(local_source_dir, False)
 
@@ -296,10 +302,10 @@ def to_bench(dataset_id: str, bucket: str, endpoint_url: str, size: int, layout_
              query_start= "2025-01-15T00:00:00+00:00", query_end= "2025-02-15T00:00:00+00:00",
              download_base_dir= "bench_downloads", query_region= "tollgate_a1_geneva",
              cleanup_prefix= True, results_csv= "results/results.csv"):
-    # test if input are correct first def check_input
-    # if return yes -> def run_bench
-    total_rows = SIZE_TO_ROWS[size]
+    '''generate the small file layout and/or compacted layout then call
+    benchmark_one_layout for the rest of the benchmark'''
 
+    total_rows = SIZE_TO_ROWS[size]
     generation_elapsed = None
     generated_file_count = None
     compaction_elapsed = None
@@ -417,11 +423,9 @@ def build_parser():
 
     parser.add_argument("--dataset-id", required=True, help="Logical dataset id, e.g. tollgate_s")
     parser.add_argument("--size", required=True, type=str, choices=["S", "M", "L"], help="Dataset size preset")
-    # parser.add_argument("--base-dir", default="data", help="Base working directory")
     parser.add_argument("--download-base-dir", default="bench_downloads", help="Base directory for downloaded benchmark copies")
     parser.add_argument("--results-csv", default="results/results.csv", help="CSV output path on the VM")
     parser.add_argument("--rows-per-file", type=int, default=10_000, help="Rows per small Parquet file")
-    # parser.add_argument("--compact-output-file-count", type=int, default=20, help="Target number of compact files")
     parser.add_argument("--compact-output-ratio", type=int, default=25, help="Compacting ratio desired")
     parser.add_argument("--seed", type=int, default=67, help="Random seed")
 
@@ -455,7 +459,7 @@ def main():
     parser_ = build_parser()
     args = parser_.parse_args()
     
-    print(f"args: {args}")
+    # print(f"args: {args}")
     to_bench(args.dataset_id, args.bucket, args.endpoint_url, args.size, args.layout,
              args.generate_small, args.small_output_dir, args.rows_per_file, args.seed,
              args.compact_from, args.compact_to, args.compact_output_ratio,

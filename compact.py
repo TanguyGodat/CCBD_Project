@@ -19,6 +19,15 @@ def count_parquet_files(directory):
             count += 1
     return count
 
+def compute_compaction_targets(tot_rows, sm_fl_ct, out_comp_ratio):
+    # Compute the target number of compacted output files
+    out_fl_ct = (sm_fl_ct + out_comp_ratio - 1) // out_comp_ratio
+
+    # Compute the target number of rows per compacted output file.
+    rows_per_out_fl = (tot_rows + out_fl_ct - 1) // out_fl_ct
+
+    return out_fl_ct, rows_per_out_fl
+
 
 def compact_dataset(input_dir, output_dir, output_compact_ratio):
     """
@@ -44,13 +53,9 @@ def compact_dataset(input_dir, output_dir, output_compact_ratio):
 
     small_file_count = count_parquet_files(input_dir)
 
-    # make a function taking total_rows and small_file_count and returning output_file_count and rows_per_output_file
-
-    # Compute the target number of compacted output files
-    output_file_count = (small_file_count + output_compact_ratio - 1) // output_compact_ratio
-
-    # Compute the target number of rows per compacted output file.
-    rows_per_output_file = (total_rows + output_file_count - 1) // output_file_count
+    
+    output_file_count, rows_per_output_file = compute_compaction_targets(
+        total_rows, small_file_count, output_compact_ratio)
 
     # Read in reasonably sized batches, then merge several batches together
     # before writing one larger compact file.
@@ -128,19 +133,12 @@ def main():
         default="data",
         help="Base directory containing curated/<dataset_id>/small"
     )
-    # parser.add_argument(
-    #     "--output-file-count",
-    #     type=int,
-    #     required=True,
-    #     help="Desired number of files in the compact output layout"
-    # )
     parser.add_argument(
         "--output-compact-ratio",
         type=int,
         default= 25,
         help="Desired compaction ratio in the compact output layout"
     )
-
 
     args = parser.parse_args()
 

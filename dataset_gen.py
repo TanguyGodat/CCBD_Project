@@ -29,7 +29,7 @@ SIZE_TO_ROWS = {
 
 
 def make_batch(start_ts, rows, user_id_max, seed):
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(seed) #seed allow reproducibility
     ts_offsets = rng.integers(0, 90 * 24 * 3600, size=rows, dtype=np.int64)
     timestamps = [start_ts + timedelta(seconds=int(x)) for x in ts_offsets]
     user_ids = rng.integers(1, user_id_max + 1, size=rows, dtype=np.int32)
@@ -62,7 +62,7 @@ def make_batch(start_ts, rows, user_id_max, seed):
 def write_small_files(output_dir, total_rows, rows_per_file, seed):
     os.makedirs(output_dir, exist_ok=True)
     start_ts = datetime(2025, 1, 1, tzinfo=timezone.utc)
-    num_files = (total_rows + rows_per_file - 1) // rows_per_file
+    num_files = (total_rows + rows_per_file - 1) // rows_per_file # rounds up the value, math.ceil
     written_rows = 0
     start_time = time.time()
 
@@ -72,13 +72,13 @@ def write_small_files(output_dir, total_rows, rows_per_file, seed):
             start_ts=start_ts,
             rows=rows_this_file,
             user_id_max=2_000_000,
-            seed=seed + file_idx,
+            seed=seed + file_idx, #offset in order to not have x times the same batch
         )
         file_path = os.path.join(output_dir, f"part-{file_idx:06d}.parquet")
         pq.write_table(table, file_path, compression="none", use_dictionary=True)
         written_rows += rows_this_file
 
-        if (file_idx + 1) % 100 == 0 or file_idx == num_files - 1:
+        if (file_idx + 1) % 100 == 0 or file_idx == num_files - 1: #print once every 100 files done
             print(f"Written {file_idx + 1}/{num_files} files")
 
     elapsed = time.time() - start_time
