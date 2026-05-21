@@ -80,7 +80,7 @@ Each dataset size and layout now has its own `.txt` file containing the benchmar
 Typical usage is:
 
 ```bash
-python bench.py @S3_requirement.txt @S_small.txt --results-csv results/results_small_small.csv
+python bench.py @S3_requirement.txt @S_small.txt --results-csv results/results_s_small.csv
 ```
 
 This merges the shared S3 connection settings from `S3_requirement.txt` with the benchmark parameters defined in `S_small.txt`, then writes the output to `results/results_small_small.csv`.
@@ -92,17 +92,17 @@ Run one command per dataset size and layout.
 ### Small-files layout
 
 ```bash
-python bench.py @S3_requirement.txt @S_small.txt --results-csv results/results_small_small.csv
-python bench.py @S3_requirement.txt @M_small.txt --results-csv results/results_medium_small.csv
-python bench.py @S3_requirement.txt @L_small.txt --results-csv results/results_large_small.csv
+python bench.py @S3_requirement.txt @S_small.txt --results-csv results/results_s_small.csv
+python bench.py @S3_requirement.txt @M_small.txt --results-csv results/results_m_small.csv
+python bench.py @S3_requirement.txt @L_small.txt --results-csv results/results_l_small.csv
 ```
 
 ### Compact layout
 
 ```bash
-python bench.py @S3_requirement.txt @S_compact.txt --results-csv results/results_small_compact.csv
-python bench.py @S3_requirement.txt @M_compact.txt --results-csv results/results_medium_compact.csv
-python bench.py @S3_requirement.txt @L_compact.txt --results-csv results/results_large_compact.csv
+python bench.py @S3_requirement.txt @S_compact.txt --results-csv results/results_s_compact.csv
+python bench.py @S3_requirement.txt @M_compact.txt --results-csv results/results_m_compact.csv
+python bench.py @S3_requirement.txt @L_compact.txt --results-csv results/results_l_compact.csv
 ```
 
 These commands keep the S3 connection settings centralized in one file and keep each benchmark configuration in its own dedicated parameter file.
@@ -127,12 +127,12 @@ The benchmark query filters on:
 
 The benchmark writes one CSV row per tested layout to the file passed through `--results-csv`. Typical outputs include:
 
-- `results/results_small_small.csv`
-- `results/results_medium_small.csv`
-- `results/results_large_small.csv`
-- `results/results_small_compact.csv`
-- `results/results_medium_compact.csv`
-- `results/results_large_compact.csv`
+- `results/results_s_small.csv`
+- `results/results_m_small.csv`
+- `results/results_l_small.csv`
+- `results/results_s_compact.csv`
+- `results/results_m_compact.csv`
+- `results/results_l_compact.csv`
 
 The workflow also uses the `.txt` files as reusable command definitions rather than as result files.
 
