@@ -2,270 +2,156 @@
 
 Authors: Tanguy Godat & Tim Gouvernon
 
-This project studies the impact of **small files** versus **compacted files** on object-storage performance. The workflow generates synthetic Parquet datasets, compacts them into fewer larger files, uploads them to a MinIO/S3-compatible object store, runs a fixed query directly on S3, downloads the data back locally, and records all measurements in a CSV file.
+This project evaluates the impact of **small Parquet files** versus **compacted Parquet files** on object-storage performance. The workflow generates synthetic datasets, optionally compacts them into fewer larger files, uploads them to a MinIO/S3-compatible object store, runs a fixed analytical query directly on S3, downloads the data back locally, and stores the benchmark measurements in CSV files. The current execution flow is designed to run cleanly inside a Docker container and to launch benchmark configurations through `@` argument files such as `S3_requirement.txt`, `S_small.txt`, and `S_compact.txt`.
 
 The benchmark compares two layouts:
 - **small**: many small Parquet files
-- **compact**: the same logical dataset rewritten into fewer larger Parquet files
+- **compact**: the same logical dataset rewritten into fewer larger files
 
 Three dataset sizes are supported:
 - **S** = 5,000,000 rows
 - **M** = 25,000,000 rows
 - **L** = 100,000,000 rows
 
+## Repository contents
+
+- `dataset_gen.py`: generates the synthetic tollgate traffic dataset in a small-files layout.
+- `compact.py`: compacts a small-files dataset into fewer larger files.
+- `upload.py`: uploads a local dataset directory to MinIO/S3.
+- `download.py`: downloads a MinIO/S3 prefix to a local directory.
+- `bench.py`: orchestrates the benchmark workflow and writes results to CSV.
+- `analysis.ipynb`: analyzes generated benchmark outputs and builds the final tables and plots.
+- `S3_requirement.txt`: shared S3 connection parameters.
+- `S_small.txt`, `M_small.txt`, `L_small.txt`: benchmark parameter files for the small-files layout.
+- `S_compact.txt`, `M_compact.txt`, `L_compact.txt`: benchmark parameter files for the compact layout.
+- `entrypoint.sh`: starts MinIO and prepares the container environment.
+- `Dockerfile`: builds the benchmark container.
+
 ## Dependencies
 
-The project requires Python 3 and the following packages:
-- `boto3`
-- `numpy`
-- `pyarrow`
-- `pandas`
-- `matplotlib`
-- `jupyter`
-- `ipykernel`
+The project requires Python 3 and the packages listed in `requirements.txt`, including `boto3`, `numpy`, `pyarrow`, `pandas`, `matplotlib`, `jupyter`, and `ipykernel`.
 
-A minimal `requirements.txt` is:
-
-```txt
-boto3
-numpy
-pyarrow
-pandas
-matplotlib
-jupyter
-ipykernel
-```
-
-Install dependencies with:
+For a local installation outside Docker:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Project files
+## Container workflow
 
-- `dataset_gen.py`: generates the synthetic tollgate traffic dataset in a small-files Parquet layout.
-- `compact.py`: compacts a small-files dataset into fewer larger Parquet files.
-- `upload.py`: uploads a local dataset directory to MinIO/S3.
-- `download.py`: downloads a MinIO/S3 prefix to a local directory.
-- `bench.py`: orchestrates the full benchmark workflow and writes results to a CSV file.
-- `analysis.ipynb`: analyzes `results/results.csv` and produces summary tables and plots.
+The recommended workflow is to run the benchmark inside Docker. The container installs Python, MinIO, and the MinIO client, clones the repository, creates a virtual environment, installs the Python dependencies, and starts a local MinIO service through `entrypoint.sh`.
 
-## Endpoint configuration
+### 1. Build the image
 
-The scripts use a MinIO/S3-compatible endpoint and accept the endpoint configuration through command-line arguments. Upload, download, and benchmark scripts all require an endpoint URL and bucket name, and they optionally accept an access key, secret key, and region.
-
-Docker setup:
 ```bash
-rm -rf ~/minio/data
-sudo mkdir -p ~/minio/data
+docker build -t ccbd-project .
+```
 
-sudo docker run -d \
-  --name minio \
+### 2. Start the container
+
+```bash
+docker run --rm -it \
   -p 9000:9000 \
   -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin \
-  -e MINIO_ROOT_PASSWORD=minioadmin123 \
-  -v ~/minio/data:/data \
-  quay.io/minio/minio server /data --console-address ":9001"
+  -v "$(pwd)/results:/opt/CCBD_Project/results" \
+  ccbd-project
 ```
 
-Typical parameters are:
-- `--endpoint-url`: MinIO/S3 endpoint, for example `http://localhost:9000`
-- `--bucket`: target bucket name
-- `--region` or `--region-name`: S3 region, default `us-east-1`
-- `--access-key`: S3 access key
-- `--secret-key`: S3 secret key
+This starts the MinIO S3 API on `http://localhost:9000` and the MinIO console on `http://localhost:9001`. The results directory is mounted so that CSV outputs written inside the container are immediately available on the host
 
-Example environment values:
+## S3 configuration file
+
+The benchmark uses a shared S3 argument file named `S3_requirement.txt`. Its current content is:
+
+```txt
+--endpoint-url http://localhost:9000
+--bucket ccbd
+--region-name us-east-1
+--access-key minioadmin
+--secret-key minioadmin123
+```
+
+This file is passed directly to `bench.py` with the `@` syntax supported by the parser. The script already enables argument-file parsing through `fromfile_prefix_chars='@'`, which is why commands such as `python bench.py @S3_requirement.txt @S_small.txt ...` work.
+
+## TXT parameter files
+
+Each dataset size and layout now has its own `.txt` file containing the benchmark arguments. This simplifies execution and avoids repeating long command lines.
+
+Typical usage is:
 
 ```bash
-export S3_ENDPOINT="http://localhost:9000"
-export S3_BUCKET="ccbd"
-export S3_REGION="us-east-1"
-export S3_ACCESS_KEY="minioadmin"
-export S3_SECRET_KEY="minioadmin123"
+python bench.py @S3_requirement.txt @S_small.txt --results-csv results/results_small_small.csv
 ```
 
-## How to run
+This merges the shared S3 connection settings from `S3_requirement.txt` with the benchmark parameters defined in `S_small.txt`, then writes the output to `results/results_small_small.csv`.
 
-### 1. Generate the small-files dataset
+## Running the benchmark
 
-This script creates a dataset under `data/curated/<dataset_id>/small`. The size preset must be one of `S`, `M`, or `L`, and the default number of rows per small file is 10,000.
+Run one command per dataset size and layout.
 
-Example:
+### Small-files layout
 
 ```bash
-python dataset_gen.py \
-  --dataset-id tollgate_s \
-  --base-dir data \
-  --size S \
-  --rows-per-file 10000 \
-  --seed 67
+python bench.py @S3_requirement.txt @S_small.txt --results-csv results/results_small_small.csv
+python bench.py @S3_requirement.txt @M_small.txt --results-csv results/results_medium_small.csv
+python bench.py @S3_requirement.txt @L_small.txt --results-csv results/results_large_small.csv
 ```
 
-### 2. Compact the dataset
-
-This script reads the small-files dataset and rewrites it into a compacted layout under `data/curated/<dataset_id>/compact`. The compaction level is controlled by `--output-compact-ratio`, which defaults to 25.
-
-Example:
+### Compact layout
 
 ```bash
-python compact.py \
-  --dataset-id tollgate_s \
-  --base-dir data \
-  --output-compact-ratio 25
+python bench.py @S3_requirement.txt @S_compact.txt --results-csv results/results_small_compact.csv
+python bench.py @S3_requirement.txt @M_compact.txt --results-csv results/results_medium_compact.csv
+python bench.py @S3_requirement.txt @L_compact.txt --results-csv results/results_large_compact.csv
 ```
 
-### 3. Upload a dataset to MinIO/S3
+These commands keep the S3 connection settings centralized in one file and keep each benchmark configuration in its own dedicated parameter file.
 
-This script uploads all `.parquet` and `.json` files from a local directory to a given bucket and prefix.
+## Benchmark behavior
 
-Example:
-
-```bash
-python upload.py \
-  --bucket "$S3_BUCKET" \
-  --local-dir data/curated/tollgate_s/small \
-  --prefix bench/tollgate_s/small \
-  --endpoint-url "$S3_ENDPOINT" \
-  --region "$S3_REGION" \
-  --access-key "$S3_ACCESS_KEY" \
-  --secret-key "$S3_SECRET_KEY"
-```
-
-### 4. Download a dataset from MinIO/S3
-
-This script downloads all objects stored under a prefix into a local directory.
-
-Example:
-
-```bash
-python download.py \
-  --bucket "$S3_BUCKET" \
-  --prefix bench/tollgate_s/small \
-  --local-dir bench_downloads/tollgate_s/small \
-  --endpoint-url "$S3_ENDPOINT" \
-  --region "$S3_REGION" \
-  --access-key "$S3_ACCESS_KEY" \
-  --secret-key "$S3_SECRET_KEY"
-```
-
-## Full benchmark workflow
-
-The main script is `bench.py`. It can:
+The benchmark can:
 1. generate a small-files dataset locally,
-2. compact it locally,
-3. upload each tested layout to MinIO/S3,
+2. compact it locally when needed,
+3. upload the selected layout to MinIO/S3,
 4. measure listing time,
 5. run a fixed query directly on S3,
 6. download the uploaded objects back locally,
-7. append the results to `results/results.csv`.
+7. append the results to the requested CSV file.
 
 The benchmark query filters on:
 - `region = tollgate_a1_geneva`
 - `2025-01-15T00:00:00+00:00 <= ts < 2025-02-15T00:00:00+00:00`
-
-### Example: reproduce the benchmark for size S
-
-```bash
-python bench.py \
-  --dataset-id tollgate_s \
-  --size S \
-  --bucket "$S3_BUCKET" \
-  --endpoint-url "$S3_ENDPOINT" \
-  --region-name "$S3_REGION" \
-  --access-key "$S3_ACCESS_KEY" \
-  --secret-key "$S3_SECRET_KEY" \
-  --rows-per-file 10000 \
-  --compact-output-ratio 25 \
-  --seed 67 \
-  --small-output-dir data/curated/tollgate_s/small \
-  --compact-from data/curated/tollgate_s/small \
-  --compact-to data/curated/tollgate_s/compact \
-  --download-base-dir bench_downloads \
-  --results-csv results/results.csv \
-  --query-region tollgate_a1_geneva \
-  --query-start 2025-01-15T00:00:00+00:00 \
-  --query-end 2025-02-15T00:00:00+00:00 \
-  --layout small::data/curated/tollgate_s/small::bench/tollgate_s/small \
-  --layout compact::data/curated/tollgate_s/compact::bench/tollgate_s/compact
-```
-
-### Example: reproduce the benchmark for sizes M and L
-
-For `M`:
-
-```bash
-python bench.py \
-  --dataset-id tollgate_m \
-  --size M \
-  --bucket "$S3_BUCKET" \
-  --endpoint-url "$S3_ENDPOINT" \
-  --region-name "$S3_REGION" \
-  --access-key "$S3_ACCESS_KEY" \
-  --secret-key "$S3_SECRET_KEY" \
-  --rows-per-file 10000 \
-  --compact-output-ratio 25 \
-  --seed 67 \
-  --small-output-dir data/curated/tollgate_m/small \
-  --compact-from data/curated/tollgate_m/small \
-  --compact-to data/curated/tollgate_m/compact \
-  --download-base-dir bench_downloads \
-  --results-csv results/results.csv \
-  --query-region tollgate_a1_geneva \
-  --query-start 2025-01-15T00:00:00+00:00 \
-  --query-end 2025-02-15T00:00:00+00:00 \
-  --layout small::data/curated/tollgate_m/small::bench/tollgate_m/small \
-  --layout compact::data/curated/tollgate_m/compact::bench/tollgate_m/compact
-```
-
-For `L`:
-
-```bash
-python bench.py \
-  --dataset-id tollgate_l \
-  --size L \
-  --bucket "$S3_BUCKET" \
-  --endpoint-url "$S3_ENDPOINT" \
-  --region-name "$S3_REGION" \
-  --access-key "$S3_ACCESS_KEY" \
-  --secret-key "$S3_SECRET_KEY" \
-  --rows-per-file 10000 \
-  --compact-output-ratio 25 \
-  --seed 67 \
-  --small-output-dir data/curated/tollgate_l/small \
-  --compact-from data/curated/tollgate_l/small \
-  --compact-to data/curated/tollgate_l/compact \
-  --download-base-dir bench_downloads \
-  --results-csv results/results.csv \
-  --query-region tollgate_a1_geneva \
-  --query-start 2025-01-15T00:00:00+00:00 \
-  --query-end 2025-02-15T00:00:00+00:00 \
-  --layout small::data/curated/tollgate_l/small::bench/tollgate_l/small \
-  --layout compact::data/curated/tollgate_l/compact::bench/tollgate_l/compact
-```
+- group by `event_type`, with count and average of `value`.
 
 ## Output files
 
-The benchmark appends one CSV row per tested layout to `results/results.csv`. Each row contains metadata and measurements such as local file count, upload throughput, listing time, query time, and download throughput.
+The benchmark writes one CSV row per tested layout to the file passed through `--results-csv`. Typical outputs include:
 
-Typical output directories are:
-- `data/curated/<dataset_id>/small`
-- `data/curated/<dataset_id>/compact`
-- `bench_downloads/<dataset_id>/<layout>`
-- `results/results.csv`
+- `results/results_small_small.csv`
+- `results/results_medium_small.csv`
+- `results/results_large_small.csv`
+- `results/results_small_compact.csv`
+- `results/results_medium_compact.csv`
+- `results/results_large_compact.csv`
 
-## How to reproduce the reported results
+The workflow also uses the `.txt` files as reusable command definitions rather than as result files.
 
-To reproduce the results presented in the notebook:
-1. install the dependencies;
-2. configure access to a running MinIO/S3-compatible endpoint;
-3. run `bench.py` once for each dataset size `S`, `M`, and `L` using the commands above;
-4. confirm that the results are appended to `results/results.csv`;
-5. open `analysis.ipynb` and run all cells from top to bottom.
+If the results directory is not mounted as a volume, files can still be copied out of the container with:
 
-The notebook reads `results/results.csv`, sorts runs by dataset size, builds summary tables, computes speedups, and plots the four key metrics: upload throughput, download throughput, listing time, and query execution time.
+```bash
+docker cp <container_id>:/opt/CCBD_Project/results/results_medium.csv .
+```
+
+## Reproducing the analysis
+
+To reproduce the reported figures and summary tables:
+1. build and start the Docker container,
+2. verify that MinIO is reachable,
+3. run the six benchmark commands shown above,
+4. confirm that the CSV outputs are written into `results/`,
+5. open `analysis.ipynb` and run all cells.
+
+The notebook reads the benchmark outputs, sorts runs by dataset size, computes speedups and percentage reductions, and generates the plots used in the report.
 
 ## Notes
 
