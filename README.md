@@ -1,3 +1,5 @@
+link to [demo](https://www.swisstransfer.com/d/68746545-0ec2-4c4a-9a4b-00d8b45748cf) 
+
 # Variant 3 — Small Files vs Compaction
 
 Authors: Tanguy Godat & Tim Gouvernon
